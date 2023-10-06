@@ -1,18 +1,26 @@
 from pprint import pprint
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms import Algorithm
+from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
+
+from rlmoduleTest import MyTorchPPORLModule
 
 config = (  # 1. Configure the algorithm,
     PPOConfig()
-    .rl_module(_enable_rl_module_api=True)
+    .rl_module(_enable_rl_module_api=True,
+        rl_module_spec=SingleAgentRLModuleSpec(module_class=MyTorchPPORLModule,
+        model_config_dict={ "fcnet_hiddens" : [64],
+            "fcnet_activation": "relu",
+            "post_fcnet_hiddens": [32],
+            "post_fcnet_activation": "relu",
+        })
+    )
     .environment("CartPole-v1", clip_rewards=False)
     .resources(num_gpus=1, num_gpus_per_learner_worker=1)
     .rollouts(num_rollout_workers=10, num_envs_per_worker=5,
         rollout_fragment_length="auto")
     .framework("torch")
-    .training(_enable_learner_api=True, model={"vf_share_layers": False,
-            "fcnet_hiddens" : [64],
-            "fcnet_activation" : "relu"},
+    .training(_enable_learner_api=True,
         entropy_coeff=0.01, train_batch_size=1000, num_sgd_iter=10,
         lr= 5e-3, vf_clip_param=10.0, kl_coeff=0.5,
         lambda_=0.95, clip_param=0.1, sgd_minibatch_size=100,

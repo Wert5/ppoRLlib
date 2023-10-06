@@ -1,37 +1,54 @@
 from pprint import pprint
-from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.algorithms import Algorithm
+from ray.rllib.policy import Policy
+import gymnasium as gym
+import multiprocessing
+import numpy as np
+import matplotlib.pyplot as plt
 
-config = (  # 1. Configure the algorithm,
-    PPOConfig()
-    .rl_module(_enable_rl_module_api=True)
-    .environment("BreakoutNoFrameskip-v4", clip_rewards=True,
-        env_config={"frameskip" : 1, "full_action_space" : False,
-        "repeat_action_probability" : 0.0})
-    .resources(num_gpus=1, num_gpus_per_learner_worker=1)
-    .rollouts(num_rollout_workers=5, num_envs_per_worker=5,
-        rollout_fragment_length="auto")
-    .framework("torch")
-    .training(_enable_learner_api=True, model={"vf_share_layers": True,
-            "conv_filters" : [[16, 4, 2], [32, 4, 2], [64, 4, 2], [128, 4, 2]],
-            "conv_activation": "relu", "post_fcnet_hiddens": [256]},
-        entropy_coeff=0.01, train_batch_size=4000, num_sgd_iter=10,
-        lr_schedule=[[0, 1e-4]], vf_clip_param=10.0, kl_coeff=0.5,
-        lambda_=0.95, clip_param=0.1, sgd_minibatch_size=1000,
-        grad_clip=100.0, grad_clip_by="global_norm")
-    .evaluation(evaluation_num_workers=5, evaluation_duration=100,
-        evaluation_interval=5)
-)
+def main():
+    num_eval_episodes = 100
 
-algo = config.build()  # 2. build the algorithm,
+    iters = []
+    means = []
 
-#algo = Algorithm.from_checkpoint("/home/winstongrenier/rlPPO1/breakoutChecks1/finalCheck")
+    for i in range(2,41,2):
+        policy = Policy.from_checkpoint(
+            "/home/winstongrenier/rlPPO1/breakoutChecks1/iter" + str(i)\
+            + "/policies/default_policy")
 
-algo.restore("/home/winstongrenier/rlPPO1/breakoutChecks1/finalCheck")
+        # instantiate env class
+        env = gym.vector.make("CartPole-v1", num_envs=num_eval_episodes)
 
-print("\nEVALUATION FINAL")
-pprint(algo.evaluate())  # 4. and evaluate it.
+        # run until episode ends
+        episode_reward = 0
+        done = False
+        obs, infos = env.reset()
+        dones = np.zeros(num_eval_episodes, dtype=bool)
+        while not all(dones):
+            actions, states, infos = policy.compute_actions(obs)
+            obs, rewards, terminates, truncates, infos = env.step(actions)
+            # Add up rewards for episodes that have not completed
+            episode_reward += sum([rewards[i] for i in range(rewards.shape[0])
+                if not dones[i]])
+            # Update flags indicating which episodes are done
+            dones = np.logical_or(terminates, dones)
 
-print("\nWEIGHTS")
-pprint({ p : {k : v.shape for k, v in w.items()}
-    for p, w in algo.get_weights().items()})
+        print("\nEVALUATION ITER", i)
+        mean_reward = episode_reward / num_eval_episodes
+        print("Mean Reward:", mean_reward)
+        iters.append(i)
+        means.append(mean_reward)
+
+
+    print(iters)
+    print(means)
+
+    plt.plot(iters, means)
+    plt.title("Reward vs Iterations")
+    plt.ylabel("Mean Reward")
+    plt.xlabel("Iteration")
+    plt.savefig("/home/winstongrenier/rlPPO1/iterMeanPlot.png")
+
+if __name__ == "__main__":
+    main()
+

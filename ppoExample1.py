@@ -21,26 +21,26 @@ config = (  # 1. Configure the algorithm,
         rollout_fragment_length="auto")
     .framework("torch")
     .training(_enable_learner_api=True,
-        entropy_coeff=0.01, train_batch_size=1000, num_sgd_iter=10,
-        lr= 5e-3, vf_clip_param=10.0, kl_coeff=0.5,
-        lambda_=0.95, clip_param=0.1, sgd_minibatch_size=100,
+        entropy_coeff=0.01, train_batch_size=5000, num_sgd_iter=10,
+        lr=1e-5, vf_clip_param=10.0, kl_coeff=0.5,
+        lambda_=0.95, clip_param=0.1, sgd_minibatch_size=500,
         grad_clip=100.0, grad_clip_by="global_norm")
     .evaluation(evaluation_num_workers=2, evaluation_duration=10,
-        evaluation_interval=2)
+        evaluation_interval=10)
 )
 
 algo = config.build()  # 2. build the algorithm,
 
 #algo = Algorithm.from_checkpoint("/home/winstongrenier/rlPPO1/breakoutChecks1/iter")
 
-for i in range(40):
+for i in range(7200):
     print("Start iter", i)
     train_dict = algo.train()  # 3. train it,
     print("Time Total s:", train_dict["time_total_s"])
     print("Time This Iter s:", train_dict["time_this_iter_s"])
     iter_num = train_dict["training_iteration"]
     print("Iteration:", iter_num)
-    if "evaluation" in train_dict:
+    if "evaluation" in train_dict or i == 0:
         pprint(train_dict)
         save_res = algo.save(checkpoint_dir=\
             "/home/winstongrenier/rlPPO1/breakoutChecks1/iter" + str(iter_num))

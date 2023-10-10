@@ -4,6 +4,7 @@ from ray.rllib.algorithms import Algorithm
 from ray.rllib.core.rl_module.rl_module import SingleAgentRLModuleSpec
 
 from rlmoduleTest import MyTorchPPORLModule
+from learnerTest import MyPPOTorchLearner
 
 config = (  # 1. Configure the algorithm,
     PPOConfig()
@@ -20,9 +21,10 @@ config = (  # 1. Configure the algorithm,
     .rollouts(num_rollout_workers=10, num_envs_per_worker=5,
         rollout_fragment_length="auto")
     .framework("torch")
-    .training(_enable_learner_api=True,
-        entropy_coeff=0.01, train_batch_size=5000, num_sgd_iter=10,
-        lr=1e-5, vf_clip_param=10.0, kl_coeff=0.5,
+    .training(_enable_learner_api=True, learner_class=MyPPOTorchLearner,
+        entropy_coeff=0.01, train_batch_size=10000, num_sgd_iter=10,
+        lr=[[0, 1e-5], [3000000, 1e-6], [18000000, 1e-7]], vf_clip_param=10.0, kl_coeff=0.5,
+        #lr=1e-5, vf_clip_param=10.0, kl_coeff=0.5,
         lambda_=0.95, clip_param=0.1, sgd_minibatch_size=500,
         grad_clip=100.0, grad_clip_by="global_norm")
     .evaluation(evaluation_num_workers=2, evaluation_duration=10,
@@ -33,7 +35,7 @@ algo = config.build()  # 2. build the algorithm,
 
 #algo = Algorithm.from_checkpoint("/home/winstongrenier/rlPPO1/breakoutChecks1/iter")
 
-for i in range(7200):
+for i in range(1800):
     print("Start iter", i)
     train_dict = algo.train()  # 3. train it,
     print("Time Total s:", train_dict["time_total_s"])

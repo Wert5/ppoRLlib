@@ -11,7 +11,7 @@ def main():
     iters = []
     means = []
 
-    for i in [1] + list(range(10,4801,10)):
+    for i in [1] + list(range(10,1801,10)):
         policy = Policy.from_checkpoint(
             "/home/winstongrenier/rlPPO1/breakoutChecks1/iter" + str(i)\
             + "/policies/default_policy")
